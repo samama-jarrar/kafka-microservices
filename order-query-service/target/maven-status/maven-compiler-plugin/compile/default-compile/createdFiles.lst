@@ -1,0 +1,4 @@
+com/example/kafka/orderqueryservice/service/OrderQueryService.class
+com/example/kafka/orderqueryservice/controller/OrderQueryController.class
+com/example/kafka/orderqueryservice/OrderQueryServiceApplication.class
+com/example/kafka/orderqueryservice/repository/OrderReadRepository.class
