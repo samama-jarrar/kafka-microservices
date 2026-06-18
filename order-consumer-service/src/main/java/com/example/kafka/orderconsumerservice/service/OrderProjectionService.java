@@ -31,6 +31,7 @@ public class OrderProjectionService {
         }
     }
 
+
     private void handleCreated(OrderEvent event) {
         if (repository.existsById(event.getOrderId())) {
             log.warn("Order {} already exists in read model, skipping CREATED", event.getOrderId());
