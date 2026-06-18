@@ -1,0 +1,4 @@
+/Users/backend-developer/Gallopade-Workspace/Trainings/kafka-microservices/order-query-service/src/main/java/com/example/kafka/orderqueryservice/OrderQueryServiceApplication.java
+/Users/backend-developer/Gallopade-Workspace/Trainings/kafka-microservices/order-query-service/src/main/java/com/example/kafka/orderqueryservice/service/OrderQueryService.java
+/Users/backend-developer/Gallopade-Workspace/Trainings/kafka-microservices/order-query-service/src/main/java/com/example/kafka/orderqueryservice/repository/OrderReadRepository.java
+/Users/backend-developer/Gallopade-Workspace/Trainings/kafka-microservices/order-query-service/src/main/java/com/example/kafka/orderqueryservice/controller/OrderQueryController.java

@@ -10,9 +10,10 @@
 
     <!-- Modules -->
     <modules>
+        <module>order-common</module>
         <module>order-producer-service</module>
         <module>order-consumer-service</module>
-        <module>order-common</module>
+        <module>order-query-service</module>
     </modules>
 
     <!-- Keep Spring Boot as parent ONLY here -->
