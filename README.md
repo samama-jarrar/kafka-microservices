@@ -17,9 +17,9 @@ A hands-on training project that combines **Apache Kafka**, **MongoDB**, and the
   order-producer-service                   order-query-service
   (port 8081)                              (port 8083)
        │                                        │
-       │  POST /orders      (Create)             │  GET /orders
-       │  PUT /orders/{id} (Update)            │  GET /orders/{id}
-       │  DELETE /orders/{id} (Delete)           │  GET /orders/by-product
+       │  POST /orders      (Create)            │  GET /orders
+       │  PUT /orders/{id} (Update)             │  GET /orders/{id}
+       │  DELETE /orders/{id} (Delete)          │  GET /orders/by-product
        │                                        │
        ▼                                        ▼
   OrderCommandService                      OrderQueryService
