@@ -41,4 +41,9 @@ public class OrderQueryController {
     public List<OrderView> searchByProduct(@RequestParam String product) {
         return queryService.searchByProduct(product);
     }
+
+    @GetMapping("/")
+    public List<OrderView> getAll() {
+        return queryService.findAll();
+    }
 }
