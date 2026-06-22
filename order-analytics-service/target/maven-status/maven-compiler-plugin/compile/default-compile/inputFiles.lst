@@ -1,0 +1,6 @@
+/Users/backend-developer/Gallopade-Workspace/Trainings/kafka-microservices/order-analytics-service/src/main/java/com/example/kafka/orderanalyticsservice/OrderAnalyticsServiceApplication.java
+/Users/backend-developer/Gallopade-Workspace/Trainings/kafka-microservices/order-analytics-service/src/main/java/com/example/kafka/orderanalyticsservice/config/SerdeConfig.java
+/Users/backend-developer/Gallopade-Workspace/Trainings/kafka-microservices/order-analytics-service/src/main/java/com/example/kafka/orderanalyticsservice/controller/AnalyticsController.java
+/Users/backend-developer/Gallopade-Workspace/Trainings/kafka-microservices/order-analytics-service/src/main/java/com/example/kafka/orderanalyticsservice/stream/OrderAnalyticsTopology.java
+/Users/backend-developer/Gallopade-Workspace/Trainings/kafka-microservices/order-analytics-service/src/main/java/com/example/kafka/orderanalyticsservice/service/ProductSalesQueryService.java
+/Users/backend-developer/Gallopade-Workspace/Trainings/kafka-microservices/order-analytics-service/src/main/java/com/example/kafka/orderanalyticsservice/model/ProductSales.java
