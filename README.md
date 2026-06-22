@@ -17,9 +17,9 @@ A hands-on training project that combines **Apache Kafka**, **MongoDB**, and the
   order-producer-service                   order-query-service
   (port 8081)                              (port 8083)
        │                                        │
-       │  POST /orders      (Create)             │  GET /orders
-       │  PUT /orders/{id} (Update)            │  GET /orders/{id}
-       │  DELETE /orders/{id} (Delete)           │  GET /orders/by-product
+       │  POST /orders      (Create)            │  GET /orders
+       │  PUT /orders/{id} (Update)             │  GET /orders/{id}
+       │  DELETE /orders/{id} (Delete)          │  GET /orders/by-product
        │                                        │
        ▼                                        ▼
   OrderCommandService                      OrderQueryService
@@ -180,6 +180,75 @@ This service **only reads** MongoDB. It never publishes to Kafka. You can scale 
 
 ---
 
+### `order-analytics-service` — Kafka Streams real-time analytics
+
+**Port:** 8085
+
+```
+orders-topic ──▶ Kafka Streams topology ──▶ state store (product-sales-store)
+                                          └▶ product-sales-topic
+                                          └▶ orders-per-product-windowed-topic
+                                                  │
+                          GET /analytics/products │  (interactive queries)
+                                                  ▼
+                                          live aggregate (no database)
+```
+
+This service is a **second, independent read model** built from the *same* `orders-topic`. But
+instead of a plain `@KafkaListener` + MongoDB (like `order-consumer-service`), it uses **Kafka
+Streams** to compute live aggregates and keeps them in an **in-process state store** — no external
+database involved.
+
+It demonstrates the core Kafka Streams ideas:
+
+| Concept | Where in the code | What it does |
+|---------|-------------------|--------------|
+| **Source `KStream`** | `builder.stream(ordersTopic, ...)` | Reads the event stream |
+| **Stateless ops** | `filter`, `selectKey` | Keep only `CREATED`, re-key by product |
+| **Stateful aggregation** | `groupByKey().aggregate(...)` | Fold events into a `ProductSales` per product |
+| **`KTable` + state store** | `Materialized.as("product-sales-store")` | A queryable, continuously-updated table |
+| **Windowing** | `windowedBy(TimeWindows.ofSizeWithNoGrace(1 min))` | Count orders per product per minute |
+| **Sink** | `.to("product-sales-topic")` | Emit the changelog of the table |
+| **Interactive queries** | `streams.store(...)` in `ProductSalesQueryService` | Serve the live store over HTTP |
+| **SerDes** | `SerdeConfig` | JSON (de)serialization for `OrderEvent` / `ProductSales` |
+
+#### What is Kafka Streams?
+
+Kafka Streams is a Java library for **stream processing** — transforming and aggregating Kafka
+topics in real time. You describe a **topology** (a graph of operations); the library runs it,
+manages local state (RocksDB), backs that state up to internal **changelog topics** for fault
+tolerance, and scales by partition across instances. There is no separate cluster — it is *just a
+library* running inside your Spring Boot app.
+
+#### `KStream` vs `KTable` (the key mental model)
+
+- A **`KStream`** is an unbounded sequence of independent **events** ("an order was created").
+- A **`KTable`** is a **changelog** that represents the *latest value per key* ("product → totals").
+  Aggregating a stream by key produces a table.
+
+#### Endpoints (served from the live state store, not a DB)
+
+| Endpoint | What happens |
+|----------|--------------|
+| `GET /analytics/products` | All products with `orderCount` + `totalQuantity` |
+| `GET /analytics/products/{product}` | One product's running totals, or 404 |
+
+Returns **503** briefly at startup while the streams engine restores its state store.
+
+**Files to study:**
+
+- `OrderAnalyticsTopology.java` — the streams topology (the heart of this service)
+- `SerdeConfig.java` — JSON SerDes for the stream
+- `ProductSalesQueryService.java` — interactive queries against the state store
+- `AnalyticsController.java` — read-only HTTP API
+- `ProductSales.java` — the aggregate value held in the `KTable`
+
+> **Note on UPDATE/DELETE:** the aggregation only counts `CREATED` events (orders *placed*).
+> Correctly decrementing on `UPDATED`/`DELETED` requires the prior order state and is intentionally
+> left as an exercise to keep the topology easy to read.
+
+---
+
 ## MongoDB Integration
 
 ### Docker
@@ -246,6 +315,9 @@ cd order-consumer-service && mvn spring-boot:run
 
 # Terminal 3 — Query service
 cd order-query-service && mvn spring-boot:run
+
+# Terminal 4 — Kafka Streams analytics (optional)
+cd order-analytics-service && mvn spring-boot:run
 ```
 
 **Startup order:** Infrastructure first, then consumer (so it is ready when events arrive), then producer and query. In practice any order works; events buffer in Kafka until the consumer is up.
@@ -306,6 +378,48 @@ Then `GET /orders/ORD-001` returns **404**.
 
 ---
 
+## Kafka Streams Walkthrough (Analytics)
+
+Make sure `order-analytics-service` is running (port 8085), then create a few orders:
+
+```bash
+curl -X POST http://localhost:8081/orders -H "Content-Type: application/json" \
+  -d '{"orderId":"ORD-001","product":"Laptop","quantity":2}'
+curl -X POST http://localhost:8081/orders -H "Content-Type: application/json" \
+  -d '{"orderId":"ORD-002","product":"Laptop","quantity":3}'
+curl -X POST http://localhost:8081/orders -H "Content-Type: application/json" \
+  -d '{"orderId":"ORD-003","product":"Mouse","quantity":5}'
+```
+
+Within ~1 second, query the **live state store** (no database involved):
+
+```bash
+# All products
+curl http://localhost:8085/analytics/products
+# [
+#   {"product":"Laptop","orderCount":2,"totalQuantity":5},
+#   {"product":"Mouse","orderCount":1,"totalQuantity":5}
+# ]
+
+# One product
+curl http://localhost:8085/analytics/products/Laptop
+# {"product":"Laptop","orderCount":2,"totalQuantity":5}
+```
+
+**What just happened:**
+
+1. The streams app read each `OrderEvent` from `orders-topic`.
+2. It filtered to `CREATED`, re-keyed each event by `product`.
+3. `aggregate(...)` folded events into a `ProductSales` per product, stored in `product-sales-store`.
+4. `GET /analytics/products` read that store **directly in-process** via interactive queries.
+
+Also inspect the output topics in **Kafka UI** (http://localhost:8080):
+
+- `product-sales-topic` — the changelog of the running totals (`KTable` → stream).
+- `orders-per-product-windowed-topic` — order counts per product per 1-minute window.
+
+---
+
 ## End-to-End Request Flow (Create Example)
 
 ```
@@ -350,6 +464,10 @@ Then `GET /orders/ORD-001` returns **404**.
 | **Message key** | `orderId` | Same key → same partition → ordered events per order |
 | **Consumer group** | `order-group` | Allows scaling consumers; each message processed once per group |
 | **JSON serialization** | Producer/consumer config | Human-readable events, easy debugging in Kafka UI |
+| **Kafka Streams topology** | `order-analytics-service` | Real-time aggregation over the event stream |
+| **`KTable` + state store** | `product-sales-store` | Continuously-updated, queryable materialized view |
+| **Interactive queries** | `GET /analytics/products` | Serve state-store data over HTTP, no DB |
+| **Windowing** | 1-minute tumbling window | Time-bucketed order counts per product |
 
 View messages in **Kafka UI**: http://localhost:8080
 
@@ -364,7 +482,8 @@ kafka-microservices/
 ├── order-common/                 # Shared commands, events, documents, views
 ├── order-producer-service/       # CQRS command side (POST, PUT, DELETE)
 ├── order-consumer-service/       # Kafka → MongoDB projection
-└── order-query-service/          # CQRS query side (GET)
+├── order-query-service/          # CQRS query side (GET)
+└── order-analytics-service/      # Kafka Streams real-time analytics (state store + interactive queries)
 ```
 
 ---
@@ -380,6 +499,10 @@ Use this to confirm you understand each piece:
 - [ ] **MongoDB** — Where is `@Document` defined? Who writes vs who reads?
 - [ ] **Kafka** — What is the message key and why use `orderId`?
 - [ ] **Repository** — How does `findByProductContainingIgnoreCase` work without SQL?
+- [ ] **Kafka Streams** — What is the difference between a `KStream` and a `KTable`?
+- [ ] **State store** — Where do the analytics totals live if there is no database?
+- [ ] **Interactive queries** — How does `GET /analytics/products` read live state in-process?
+- [ ] **Two read models** — How is `order-analytics-service` different from `order-consumer-service`?
 
 ---
 
@@ -402,5 +525,6 @@ Use this to confirm you understand each piece:
 | order-consumer-service (internal) | 8082 |
 | order-query-service (queries) | 8083 |
 | Mongo Express | 8084 |
+| order-analytics-service (Kafka Streams) | 8085 |
 | Kafka broker | 9092 |
 | MongoDB | 27017 |

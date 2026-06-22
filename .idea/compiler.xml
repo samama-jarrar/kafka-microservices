@@ -10,12 +10,14 @@
         <module name="order-consumer-service" />
         <module name="order-producer-service" />
         <module name="order-common" />
+        <module name="order-analytics-service" />
         <module name="order-query-service" />
       </profile>
     </annotationProcessing>
   </component>
   <component name="JavacSettings">
     <option name="ADDITIONAL_OPTIONS_OVERRIDE">
+      <module name="order-analytics-service" options="-parameters" />
       <module name="order-common" options="-parameters" />
       <module name="order-consumer-service" options="-parameters" />
       <module name="order-producer-service" options="-parameters" />

@@ -14,6 +14,7 @@
         <module>order-producer-service</module>
         <module>order-consumer-service</module>
         <module>order-query-service</module>
+        <module>order-analytics-service</module>
     </modules>
 
     <!-- Keep Spring Boot as parent ONLY here -->
