@@ -1,4 +1,4 @@
-# Kafka Microservices with MongoDB and CQRS
+# Kafka Microservices
 
 A hands-on training project that combines **Apache Kafka**, **MongoDB**, and the **CQRS pattern** (Command Query Responsibility Segregation) using Spring Boot 3.
 
