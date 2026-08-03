@@ -8,7 +8,6 @@
 
     <name>kafka-microservices</name>
 
-    <!-- Modules -->
     <modules>
         <module>order-common</module>
         <module>order-producer-service</module>
@@ -17,7 +16,6 @@
         <module>order-analytics-service</module>
     </modules>
 
-    <!-- Keep Spring Boot as parent ONLY here -->
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
